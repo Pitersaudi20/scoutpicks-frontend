@@ -1,53 +1,103 @@
-<script>
-const API_URL = 'https://scoutpicks-backend-1.onrender.com/api/partidos-hoy';
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ScoutPicks — Partidos de hoy</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#0b1220;color:#eaf0fb;font:15px system-ui,sans-serif}
+    header{padding:24px;background:#111c30;border-bottom:1px solid #263650}
+    main{max-width:1100px;margin:auto;padding:20px}
+    h1{margin:5px 0}
+    .notice,.card{padding:16px;border-radius:12px;margin-bottom:14px}
+    .notice{background:#342b17;border:1px solid #78612b;color:#ffe6a5}
+    .card{background:#121e32;border:1px solid #263a58}
+    .tag,.muted{color:#9fb5d6;font-size:12px}
+    .pick{font-size:19px;font-weight:750;margin:10px 0}
+    .why{color:#bdcbe0;line-height:1.45}
+    .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .stat{background:#0c1728;padding:10px;border-radius:8px}
+    .stat b{display:block;font-size:18px}
+    button{background:#477cf5;color:white;border:0;border-radius:8px;padding:10px 13px;font-weight:700}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="tag">ANÁLISIS DE FÚTBOL</div>
+    <h1>ScoutPicks · Partidos de hoy</h1>
+  </header>
 
-async function render() {
-  const container = document.getElementById('picks');
-  container.innerHTML = '<p class="why">Cargando partidos...</p>';
+  <main>
+    <div class="notice">
+      Partidos obtenidos desde el backend. Las estadísticas y cuotas todavía no están incluidas.
+    </div>
 
-  try {
-    const response = await fetch(API_URL);
-    if (!response.ok) throw new Error('Error HTTP ' + response.status);
+    <button onclick="render()">Actualizar partidos</button>
+    <h2>Partidos de hoy</h2>
+    <div id="picks" class="why">Cargando partidos...</div>
+  </main>
 
-    const data = await response.json();
-    const partidos = data.response || [];
+  <script>
+    const API_URL = 'https://scoutpicks-backend-1.onrender.com/api/partidos-hoy';
 
-    if (!partidos.length) {
-      container.innerHTML = '<p class="why">La API no devolvió partidos para hoy.</p>';
-      return;
+    async function render() {
+      const container = document.getElementById('picks');
+      container.innerHTML = '<p class="why">Cargando partidos...</p>';
+
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+
+        const data = await response.json();
+        const partidos = data.response || [];
+
+        if (!partidos.length) {
+          container.innerHTML = '<p>No hay partidos devueltos para hoy.</p>';
+          return;
+        }
+
+        container.innerHTML = partidos.map(p => {
+          const local = p.teams?.home?.name || 'Local';
+          const visita = p.teams?.away?.name || 'Visita';
+          const liga = p.league?.name || '';
+          const fecha = p.fixture?.date;
+          const hora = fecha
+            ? new Date(fecha).toLocaleTimeString('es-CL', {
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'America/Santiago'
+              })
+            : 'Hora no disponible';
+          const estado = p.fixture?.status?.short || '';
+          const golesLocal = p.goals?.home ?? '-';
+          const golesVisita = p.goals?.away ?? '-';
+
+          return `
+            <article class="card">
+              <div class="tag">${liga}</div>
+              <div class="pick">${local} – ${visita}</div>
+              <p class="why">Hora: ${hora} · Estado: ${estado}</p>
+              <div class="stats">
+                <div class="stat">
+                  <span class="muted">Goles local</span>
+                  <b>${golesLocal}</b>
+                </div>
+                <div class="stat">
+                  <span class="muted">Goles visita</span>
+                  <b>${golesVisita}</b>
+                </div>
+              </div>
+            </article>`;
+        }).join('');
+      } catch (error) {
+        container.innerHTML =
+          '<p>No se pudieron cargar los partidos. Revisa el backend.</p>';
+        console.error(error);
+      }
     }
 
-    container.innerHTML = partidos.map(p => {
-      const local = p.teams?.home?.name || 'Local';
-      const visita = p.teams?.away?.name || 'Visita';
-      const liga = p.league?.name || '';
-      const hora = p.fixture?.date
-        ? new Date(p.fixture.date).toLocaleTimeString('es-CL', {
-            hour: '2-digit', minute: '2-digit', timeZone: 'America/Santiago'
-          })
-        : '';
-      const estado = p.fixture?.status?.short || '';
-      const golesLocal = p.goals?.home ?? '-';
-      const golesVisita = p.goals?.away ?? '-';
-
-      return `
-        <article class="card">
-          <div class="tag">${liga}</div>
-          <div class="pick">${local} – ${visita}</div>
-          <p class="why">Hora: ${hora} · Estado: ${estado}</p>
-          <div class="stats">
-            <div class="stat"><span class="muted">Goles local</span><b>${golesLocal}</b></div>
-            <div class="stat"><span class="muted">Goles visita</span><b>${golesVisita}</b></div>
-          </div>
-        </article>`;
-    }).join('');
-  } catch (error) {
-    container.innerHTML =
-      '<p class="why">No se pudieron cargar los partidos. Revisa la conexión del backend.</p>';
-    console.error(error);
-  }
-}
-
-document.querySelector('button[onclick]').onclick = render;
-render();
-</script>
+    render();
+  </script>
+</body>
+</html>
